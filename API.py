@@ -1,22 +1,25 @@
-# Databricks notebook source
 # API.py
-# Pulls sample user profile data from a public API and saves it for the join.
-# No credentials needed for this one - randomuser.me is a free public API.
+# Pulls sample user data from the randomuser.me API, flattens the JSON response,
+# unions in a small set of shared/reference test records, and writes the
+# combined result to a Delta table for downstream joining.
 
 import urllib.request
-from pyspark.sql.functions import *
+from pyspark.sql import functions as F
+from pyspark.sql import Row
 
 url = "https://randomuser.me/api/0.8/?results=1000"
 
 urldata = urllib.request.urlopen(url).read().decode("utf-8")
 
-schema = spark.range(1).select(schema_of_json(lit(urldata))).first()[0]
+schema = spark.range(1).select(F.schema_of_json(F.lit(urldata))).first()[0]
 
-jsondf = spark.createDataFrame([(urldata,)], ["json_data"]) \
-              .select(from_json(col("json_data"), schema).alias("data")) \
-              .select("data.*")
+jsondf = (
+    spark.createDataFrame([(urldata,)], ["json_data"])
+    .select(F.from_json(F.col("json_data"), schema).alias("data"))
+    .select("data.*")
+)
 
-final_df = jsondf.withColumn("results", explode("results")).selectExpr(
+final_df = jsondf.withColumn("results", F.explode("results")).selectExpr(
     "nationality",
     "results.user.gender as gender",
     "results.user.name.title as title",
@@ -25,7 +28,7 @@ final_df = jsondf.withColumn("results", explode("results")).selectExpr(
     "results.user.location.street as street",
     "results.user.location.city as city",
     "results.user.location.state as state",
-    "results.user.location.zip as zip",
+    "CAST(results.user.location.zip AS STRING) as zip",
     "results.user.email as email",
     "results.user.username as username",
     "results.user.password as password",
@@ -41,19 +44,69 @@ final_df = jsondf.withColumn("results", explode("results")).selectExpr(
     "results.user.picture.medium as medium",
     "results.user.picture.thumbnail as thumbnail",
     "seed",
-    "version"
+    "version",
 )
 
-removenum = final_df.withColumn("username", expr("regexp_replace(username,'[0-9]', '')"))
+removenum = final_df.withColumn(
+    "username",
+    F.lower(F.expr("regexp_replace(username,'[0-9]', '')")),
+)
 
-# randomuser.me repeats usernames often, so dedupe here to keep the later join clean
-deduped = removenum.dropDuplicates(["username"])
+# Small set of shared/reference test records unioned in alongside the API pull
+shared_api = spark.createDataFrame(
+    [
+        Row(
+            username="testuser1", nationality="US", gender="male", title="Mr",
+            first="Test", last="UserOne", street="123 Main St", city="Bengaluru",
+            state="KA", zip="560001", email="testuser1@example.com",
+            password="placeholder", salt="placeholder", md5="placeholder",
+            sha1="placeholder", sha256="placeholder", registered=1600000000,
+            dob=946684800, phone="000-000-0001", cell="000-000-0001",
+            large="", medium="", thumbnail="", seed="seed1", version="0.8",
+        ),
+        Row(
+            username="testuser2", nationality="US", gender="female", title="Ms",
+            first="Test", last="UserTwo", street="124 Main St", city="Bengaluru",
+            state="KA", zip="560002", email="testuser2@example.com",
+            password="placeholder", salt="placeholder", md5="placeholder",
+            sha1="placeholder", sha256="placeholder", registered=1600000001,
+            dob=946684801, phone="000-000-0002", cell="000-000-0002",
+            large="", medium="", thumbnail="", seed="seed2", version="0.8",
+        ),
+        Row(
+            username="testuser3", nationality="US", gender="male", title="Mr",
+            first="Test", last="UserThree", street="125 Main St", city="Bengaluru",
+            state="KA", zip="560003", email="testuser3@example.com",
+            password="placeholder", salt="placeholder", md5="placeholder",
+            sha1="placeholder", sha256="placeholder", registered=1600000002,
+            dob=946684802, phone="000-000-0003", cell="000-000-0003",
+            large="", medium="", thumbnail="", seed="seed3", version="0.8",
+        ),
+        Row(
+            username="testuser4", nationality="US", gender="female", title="Ms",
+            first="Test", last="UserFour", street="126 Main St", city="Bengaluru",
+            state="KA", zip="560004", email="testuser4@example.com",
+            password="placeholder", salt="placeholder", md5="placeholder",
+            sha1="placeholder", sha256="placeholder", registered=1600000003,
+            dob=946684803, phone="000-000-0004", cell="000-000-0004",
+            large="", medium="", thumbnail="", seed="seed4", version="0.8",
+        ),
+    ]
+)
 
-deduped.write.mode("overwrite").option("overwriteSchema", "true").saveAsTable("zeyodb.api_tab")
+shared_api = shared_api.select(removenum.columns)
 
-print("API data written to zeyodb.api_tab")
+api_final = removenum.unionByName(shared_api)
 
-# COMMAND ----------
+spark.sql("CREATE DATABASE IF NOT EXISTS zeyodb")
 
-# MAGIC %sql
-# MAGIC SELECT * FROM zeyodb.api_tab LIMIT 10
+api_final.write.format("delta").mode("overwrite").option(
+    "overwriteSchema", "true"
+).saveAsTable("zeyodb.api_tab")
+
+print("== API DATA WRITTEN TO TABLE ==")
+
+# Sanity check: confirm the shared/reference test records made it into the table
+spark.table("zeyodb.api_tab").filter(
+    F.col("username").isin("testuser1", "testuser2", "testuser3", "testuser4")
+).show(20, False)

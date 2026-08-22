@@ -77,10 +77,10 @@ Use real usernames that also exist in your parquet file, or the join in
 
 ### 2. Databricks
 
-1. Upload `sample_data/data.parquet` to a Unity Catalog volume
+1. Upload `data.parquet` to a Unity Catalog volume
    (**New -> Add or upload data -> Upload files to a volume**), and copy the
    resulting path.
-2. Import the four notebooks from `notebooks/` into your workspace.
+2. Import the four notebooks (ADL.py, API.py, Snow.py, Master.py) into your workspace
 3. In `ADL.py`, replace the parquet path with the one you copied.
 4. In `Snow.py` and `Master.py`, replace `<your_snowflake_account>` and
    `<your_snowflake_username>` with your own Snowflake account identifier and
@@ -91,8 +91,14 @@ Use real usernames that also exist in your parquet file, or the join in
    It is never stored in the code.
 
 ## Sample output
+The final data was successfully loaded into Snowflake and validated using SQL queries.
 
-_(screenshot of the final master_tab query result goes here)_
+
+
+
+![Snowflake Query Result](Snowflake-output.png.png)
+
+
 
 ## Planned improvements
 
