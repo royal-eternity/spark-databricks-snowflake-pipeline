@@ -1,4 +1,4 @@
-# Zeyo Data Pipeline
+# Spark-databricks-snowflake-pipeline
 
 An end-to-end data pipeline that pulls user data from three different sources,
 joins it into one table, and writes the result to both Databricks and Snowflake.
@@ -6,7 +6,6 @@ Built to practice integrating PySpark, Databricks, and Snowflake.
 
 ## Architecture
 
-```
    Parquet file          Public API           Snowflake table
  (score data)         (profile data)          (IP/session data)
         │                    │                        │
