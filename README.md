@@ -5,25 +5,7 @@ joins it into one table, and writes the result to both Databricks and Snowflake.
 Built to practice integrating PySpark, Databricks, and Snowflake.
 
 ## Architecture
-
-   Parquet file          Public API           Snowflake table
- (score data)         (profile data)          (IP/session data)
-        │                    │                        │
-        ▼                    ▼                        ▼
-     ADL.py               API.py                   Snow.py
-   (Spark read,        (Spark read,            (Snowflake read,
-   aggregate)            dedupe)                 Spark convert)
-        │                    │                        │
-        └────────────────────┼────────────────────────┘
-                              ▼
-                          Master.py
-                    (join on username)
-                              │
-                ┌─────────────┴─────────────┐
-                ▼                            ▼
-        Databricks table              Snowflake table
-        zeyodb.master_tab              MASTER_TAB
-```
+![Project Architecture](Architecture.png)
 
 Each source is read and saved as its own table, then `Master.py` joins all
 three on `username` and writes the combined result to both Databricks and
