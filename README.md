@@ -11,13 +11,47 @@ Each source is read and saved as its own table, then `Master.py` joins all
 three on `username` and writes the combined result to both Databricks and
 Snowflake.
 
-## Sources
+## Problem statement
 
-| Source | Notebook | What it provides |
-|---|---|---|
-| Parquet file (Unity Catalog volume) | `ADL.py` | Per-user scores, aggregated into a list |
-| Public API (randomuser.me) | `API.py` | Sample user profile data (name, email, location, etc.) |
-| Snowflake table | `Snow.py` | IP/session data |
+Organizations often store data across multiple sources and platforms, such as Parquet files, external APIs, and cloud data warehouses like Snowflake. Managing these data sources independently makes it difficult to combine information, maintain consistency, and generate a unified dataset for analytics.
+
+The objective of this project is to build an end-to-end data engineering pipeline using PySpark, Databricks, and Snowflake that can ingest data from multiple heterogeneous sources, process and transform the data, and integrate the datasets into a unified view.
+
+The pipeline reads structured data from Parquet files, retrieves additional information from an external API, and extracts data from Snowflake. PySpark is then used for data processing and transformation, while Databricks provides the processing environment. The datasets are joined using a common business key such as username and the resulting integrated data is made available for downstream analytics.
+
+The project demonstrates how a data engineer can build a scalable pipeline that addresses common real-world challenges such as multi-source data ingestion, data transformation, schema handling, data integration, and cloud-based data processing.
+
+## 📊 Data Sources
+
+| Source | Project File |
+|--------|--------------|
+| 📁 Parquet Dataset | [data.parquet](https://github.com/royal-eternity/spark-databricks-snowflake-pipeline/blob/main/data.parquet) |
+| 🔌 External API | [API.py](https://github.com/royal-eternity/spark-databricks-snowflake-pipeline/blob/main/API.py) |
+| ❄️ Snowflake | [Snow.py](https://github.com/royal-eternity/spark-databricks-snowflake-pipeline/blob/main/Snow.py) |
+| 🔄 Master Integration Pipeline | [Master.py](https://github.com/royal-eternity/spark-databricks-snowflake-pipeline/blob/main/Master.py) |
+
+## Pipeline Explanation
+
+This project implements an end-to-end data integration pipeline using PySpark, Databricks, and Snowflake.
+
+The pipeline follows these steps:
+
+1. Data Ingestion → Data is collected from a Parquet file, external API, and Snowflake.
+
+2. Data Processing → The ingested data is loaded into PySpark DataFrames for processing and transformation.
+
+3. Data Transformation → The datasets are cleaned and prepared into a consistent structure.
+
+4. Data Integration → Data from the different sources is joined using the common username field.
+
+5. Databricks Processing → PySpark jobs are executed in the Databricks environment for scalable data processing.
+
+6. Final Output → The integrated data is produced as a unified dataset for downstream analysis and data processing.
+
+Overall Flow:
+
+Parquet + API + Snowflake → PySpark → Transformation → Join → Databricks → Unified Dataset
+
 
 ## Tech used
 
